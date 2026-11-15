@@ -71,6 +71,12 @@ export default function SettingsPage() {
           <button className="btn-primary">Save preferences</button>
         </form>
 
+        {!user!.hasPassword ? (
+          <section className="card space-y-2">
+            <h2 className="font-display text-lg font-extrabold">Password</h2>
+            <p className="text-sm text-ink/70 dark:text-white/70">You signed up with Google, so there's no SpendWise password yet. To set one, log out and choose "Forgot password" on the login page. You can keep using Google either way.</p>
+          </section>
+        ) : (
         <form onSubmit={savePw} className="card space-y-3" noValidate>
           <h2 className="font-display text-lg font-extrabold">Change password</h2>
           {pwMsg && <Notice tone={pwMsg.tone}>{pwMsg.text}</Notice>}
@@ -78,6 +84,7 @@ export default function SettingsPage() {
           <TextField label="New password" type="password" autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))} error={pwFields.newPassword} hint="At least 8 characters, with a letter and a number." required />
           <button className="btn-primary">Update password</button>
         </form>
+        )}
 
         <section className="card lg:col-span-2">
           <h2 className="font-display text-lg font-extrabold">Sample data</h2>

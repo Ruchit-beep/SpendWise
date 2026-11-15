@@ -101,3 +101,34 @@ test('reports and exports use real records; demo data is removable', async () =>
   assert.equal(d.hasDemo, false);
   assert.ok(d.cards.balance.value !== 0); // real records survived
 });
+
+test('forgot and reset password: generic reply, one-time token, old sessions revoked', async () => {
+  process.env.APP_URL = 'http://localhost:5173';
+  const post = (path, body) => request(app).post(path).send(body);
+  globalThis.__lastMail = undefined;
+  const unknown = await post('/api/auth/forgot', { email: 'nobody@x.com' });
+  const known = await post('/api/auth/forgot', { email: 'b@x.com' });
+  assert.equal(unknown.status, 200);
+  assert.equal(unknown.body.message, known.body.message); // no account enumeration
+  await new Promise((r) => setTimeout(r, 150)); // the email is sent without blocking the response
+  assert.equal(globalThis.__lastMail.to, 'b@x.com');
+  const token = globalThis.__lastMail.text.match(/token=([a-f0-9]+)/)[1];
+  const raw = await mongoose.connection.collection('users').findOne({ email: 'b@x.com' });
+  assert.notEqual(raw.resetTokenHash, token); // only a hash is stored
+
+  assert.equal((await post('/api/auth/reset', { token: 'f'.repeat(64), password: 'newpass123' })).status, 400);
+  assert.equal((await post('/api/auth/reset', { token, password: 'short' })).status, 400);
+  assert.equal((await b.get('/api/auth/me')).status, 200);
+  await new Promise((r) => setTimeout(r, 1100)); // JWT times have 1-second resolution
+  assert.equal((await post('/api/auth/reset', { token, password: 'newpass123' })).status, 200);
+  assert.equal((await post('/api/auth/reset', { token, password: 'another123' })).status, 400); // single use
+  assert.equal((await b.get('/api/auth/me')).status, 401); // old session revoked
+  assert.equal((await post('/api/auth/login', { email: 'b@x.com', password: 'password2' })).status, 401);
+  assert.equal((await post('/api/auth/login', { email: 'b@x.com', password: 'newpass123' })).status, 200);
+});
+
+test('google sign-in is off until configured', async () => {
+  delete process.env.GOOGLE_CLIENT_ID;
+  assert.equal((await request(app).get('/api/auth/config')).body.googleClientId, null);
+  assert.equal((await request(app).post('/api/auth/google').send({ credential: 'x'.repeat(40) })).status, 503);
+});

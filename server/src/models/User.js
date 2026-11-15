@@ -5,7 +5,12 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 80 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true, select: false },
+    passwordHash: { type: String, select: false }, // absent for accounts created with Google until a password is set
+    hasPassword: { type: Boolean, default: true },
+    googleId: { type: String, unique: true, sparse: true },
+    passwordChangedAt: { type: Date },
+    resetTokenHash: { type: String, select: false },
+    resetTokenExpires: { type: Date, select: false },
     phone: { type: String, trim: true, maxlength: 30, default: '' },
     occupation: { type: String, trim: true, maxlength: 80, default: '' },
     bio: { type: String, trim: true, maxlength: 300, default: '' },
@@ -27,6 +32,8 @@ userSchema.methods.toSafe = function () {
     currency: this.currency,
     theme: this.theme,
     monthlyBudgetPref: this.monthlyBudgetPref,
+    hasPassword: this.hasPassword !== false,
+    googleLinked: !!this.googleId,
     createdAt: this.createdAt,
   };
 };

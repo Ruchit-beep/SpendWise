@@ -30,6 +30,11 @@ export async function requireAuth(req, res, next) {
       clearSession(res);
       return res.status(401).json({ error: 'Account not found.' });
     }
+    // A password change or reset signs out every session issued before it.
+    if (user.passwordChangedAt && payload.iat < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+      clearSession(res);
+      return res.status(401).json({ error: 'Your password was changed. Please log in again.' });
+    }
     req.user = user;
     next();
   } catch (e) {

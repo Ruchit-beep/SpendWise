@@ -22,14 +22,17 @@ export function createApp() {
 
   app.use(
     helmet({
+      // Google's sign-in popup needs to keep a reference to this window.
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          scriptSrc: ["'self'", 'https://accounts.google.com/gsi/client'],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com/gsi/style'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-          imgSrc: ["'self'", 'data:'],
-          connectSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https://*.googleusercontent.com'],
+          connectSrc: ["'self'", 'https://accounts.google.com/gsi/'],
+          frameSrc: ["'self'", 'https://accounts.google.com/gsi/'],
         },
       },
     })

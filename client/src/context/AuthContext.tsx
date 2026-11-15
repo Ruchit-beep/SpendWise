@@ -8,6 +8,7 @@ interface AuthValue {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (u: User) => void
   /** Increments whenever data changes, so pages re-fetch. */
@@ -65,6 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (name: string, email: string, password: string) => {
     setUserState((await api.post<{ user: User }>('/auth/register', { name, email, password })).user)
   }, [])
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    setUserState((await api.post<{ user: User }>('/auth/google', { credential })).user)
+  }, [])
   const logout = useCallback(async () => {
     await api.post('/auth/logout').catch(() => undefined)
     setUserState(null)
@@ -73,6 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currency: Currency = user?.currency ?? 'INR'
   const money = useCallback((n: number, opts?: { compact?: boolean }) => formatMoney(n, currency, opts), [currency])
 
-  const value = useMemo(() => ({ user, loading, login, register, logout, setUser: setUserState as (u: User) => void, version, bump, money, currency }), [user, loading, login, register, logout, version, bump, money, currency])
+  const value = useMemo(() => ({ user, loading, login, register, loginWithGoogle, logout, setUser: setUserState as (u: User) => void, version, bump, money, currency }), [user, loading, login, register, loginWithGoogle, logout, version, bump, money, currency])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

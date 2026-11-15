@@ -11,6 +11,8 @@ export interface User {
   currency: Currency
   theme: Theme
   monthlyBudgetPref: number
+  hasPassword: boolean
+  googleLinked: boolean
   createdAt: string
 }
 

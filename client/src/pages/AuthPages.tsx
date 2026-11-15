@@ -1,8 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ApiError } from '../lib/api'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 import { Notice, TextField } from '../components/ui'
+import GoogleButton from '../components/GoogleButton'
 
 function Shell({ title, sub, children, foot }: { title: string; sub: string; children: ReactNode; foot: ReactNode }) {
   return (
@@ -59,8 +60,10 @@ export function Login() {
         {err && <Notice tone="error">{err}</Notice>}
         <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={fields.email} required />
         <TextField label="Password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} error={fields.password} required />
+        <div className="text-right"><Link to="/forgot-password" className="text-sm font-bold underline">Forgot password?</Link></div>
         <button className="btn-primary w-full" disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
       </form>
+      <GoogleButton text="signin_with" />
     </Shell>
   )
 }
@@ -80,6 +83,97 @@ export function Signup() {
         <TextField label="Password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} error={fields.password} hint="At least 8 characters, with a letter and a number." required />
         <button className="btn-primary w-full" disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</button>
       </form>
+      <GoogleButton text="signup_with" />
+    </Shell>
+  )
+}
+
+export function ForgotPassword() {
+  const [email, setEmail] = useState('')
+  const [err, setErr] = useState('')
+  const [sent, setSent] = useState('')
+  const [busy, setBusy] = useState(false)
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setErr('')
+    try {
+      setSent((await api.post<{ message: string }>('/auth/forgot', { email })).message)
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Shell title="Forgot password?" sub="Enter your email and we'll send you a reset link." foot={<Link className="font-bold underline" to="/login">Back to log in</Link>}>
+      {sent ? (
+        <Notice tone="success">{sent} Check your spam folder if it doesn't show up.</Notice>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {err && <Notice tone="error">{err}</Notice>}
+          <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <button className="btn-primary w-full" disabled={busy}>{busy ? 'Sending…' : 'Send reset link'}</button>
+        </form>
+      )}
+    </Shell>
+  )
+}
+
+export function ResetPassword() {
+  const [params] = useSearchParams()
+  const [token] = useState(() => params.get('token') ?? '')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [err, setErr] = useState('')
+  const [fields, setFields] = useState<Record<string, string>>({})
+  const [done, setDone] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  // Keep the one-time token out of the address bar and browser history.
+  useEffect(() => {
+    if (token) window.history.replaceState(null, '', window.location.pathname)
+  }, [token])
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setErr('')
+    setFields({})
+    if (password !== confirm) return setFields({ confirm: 'Passwords do not match.' })
+    setBusy(true)
+    try {
+      await api.post('/auth/reset', { token, password })
+      setDone(true)
+    } catch (x) {
+      if (x instanceof ApiError) {
+        setErr(x.message)
+        setFields(x.fields ?? {})
+      } else setErr('Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Shell title="Choose a new password" sub="Make it something you haven't used elsewhere." foot={<Link className="font-bold underline" to="/login">Back to log in</Link>}>
+      {done ? (
+        <div className="space-y-4">
+          <Notice tone="success">Password updated. You can log in with it now.</Notice>
+          <Link to="/login" className="btn-primary w-full">Go to log in</Link>
+        </div>
+      ) : !token ? (
+        <div className="space-y-4">
+          <Notice tone="error">This reset link is missing its token. Please request a new one.</Notice>
+          <Link to="/forgot-password" className="btn-primary w-full">Request a new link</Link>
+        </div>
+      ) : (
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {err && <Notice tone="error">{err}</Notice>}
+          <TextField label="New password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} error={fields.password} hint="At least 8 characters, with a letter and a number." required />
+          <TextField label="Confirm new password" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} error={fields.confirm} required />
+          <button className="btn-primary w-full" disabled={busy}>{busy ? 'Saving…' : 'Update password'}</button>
+        </form>
+      )}
     </Shell>
   )
 }

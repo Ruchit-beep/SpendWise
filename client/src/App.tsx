@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import { GuestOnly, Protected } from './components/Guard'
 import Landing from './pages/Landing'
-import { Login, Signup } from './pages/AuthPages'
+import { ForgotPassword, Login, ResetPassword, Signup } from './pages/AuthPages'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Budgets from './pages/Budgets'
@@ -16,6 +16,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+      <Route path="/forgot-password" element={<GuestOnly><ForgotPassword /></GuestOnly>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/signup" element={<GuestOnly><Signup /></GuestOnly>} />
       <Route path="/app" element={<Protected><Layout /></Protected>}>
         <Route index element={<Navigate to="dashboard" replace />} />

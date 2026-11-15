@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import User from '../models/User.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, setSession } from '../middleware/auth.js';
 import { wrap } from '../middleware/error.js';
 import { CURRENCIES, THEMES } from '../constants.js';
 
@@ -57,9 +57,12 @@ router.put(
   wrap(async (req, res) => {
     const data = passwordSchema.parse(req.body);
     const user = await User.findById(req.user.id).select('+passwordHash');
+    if (!user.passwordHash) return res.status(400).json({ error: 'Your account uses Google sign-in. To set a password, log out and use "Forgot password" on the login page.' });
     if (!(await bcrypt.compare(data.currentPassword, user.passwordHash))) return res.status(400).json({ error: 'Current password is incorrect.', fields: { currentPassword: 'Incorrect password.' } });
     user.passwordHash = await bcrypt.hash(data.newPassword, 12);
+    user.passwordChangedAt = new Date(); // other devices get signed out
     await user.save();
+    setSession(res, user.id); // keep this device logged in
     res.json({ ok: true });
   })
 );
